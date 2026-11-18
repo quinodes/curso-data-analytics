@@ -33,20 +33,26 @@ GROUP BY id_cliente
 HAVING COUNT(*) > 1
 ORDER BY total_gastado DESC;
 
-/* CONSULTA 4: Meses por encima o por debajo del promedio */
--- Compara el total de cada mes con el promedio mensual general
-SELECT 
-    MONTH(fecha_venta) AS mes,
-    SUM(cantidad * precio_unitario) AS total_facturado,
-    CASE 
-        WHEN SUM(cantidad * precio_unitario) >= 
-             (SELECT SUM(cantidad * precio_unitario) / COUNT(DISTINCT MONTH(fecha_venta)) FROM ventas)
+/* CONSULTA 4: Productos por encima o por debajo del promedio */
+-- Primero calculo el total de cada producto (WITH),
+-- después comparo cada total contra el promedio de esos totales
+WITH totales_producto AS (
+    SELECT
+        id_producto,
+        SUM(cantidad * precio_unitario) AS total_facturado
+    FROM ventas
+    GROUP BY id_producto
+)
+SELECT
+    id_producto,
+    total_facturado,
+    CASE
+        WHEN total_facturado > (SELECT AVG(total_facturado) FROM totales_producto)
         THEN 'Por encima'
         ELSE 'Por debajo'
     END AS comparacion_promedio
-FROM ventas
-GROUP BY MONTH(fecha_venta);
-
+FROM totales_producto
+ORDER BY total_facturado DESC;
 /* HALLAZGOS
 -- 1. La laptop (producto 1) es la que genera más ingresos: $3.600 de los $6.444,
 -- más de la mitad de las ventas, aunque solo se vendieron 3 unidades.
