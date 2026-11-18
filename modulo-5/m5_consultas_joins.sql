@@ -1,10 +1,11 @@
-
+-- Motor utilizado: SQL Server 2025
 -- M5: Consultas con JOINs - Ventas_Tech_DB
 
 USE Ventas_Tech_DB;
 
-/* CONSULTA 1: Vista base del proyecto (INNER JOIN) */
--- Cada venta con los datos del cliente, el producto y la categoría en una sola fila
+-- Consulta 1: Vista base del proyecto (INNER JOIN)
+-- Propósito: tener cada venta con los datos del cliente, el producto y la categoría en una sola fila,
+-- para usarla como fuente principal en Power BI (ciudad sirve para filtrar y categoría para agrupar).
 SELECT
     v.fecha_venta AS fecha,
     c.nombre AS cliente,
@@ -22,9 +23,11 @@ INNER JOIN productos AS p
 INNER JOIN categorias AS cat
     ON p.id_categoria = cat.id_categoria
 ORDER BY v.fecha_venta;
+-- Hallazgo: las 10 ventas cruzan bien con sus clientes y productos. Computación es la categoría
+-- que más vende: $4.950 de los $6.444 totales (77%).
 
-/* CONSULTA 2: Clientes sin ventas (LEFT JOIN) */
--- Clientes registrados que nunca compraron
+-- Consulta 2: Clientes sin ventas (LEFT JOIN)
+-- Propósito: detectar clientes registrados que nunca compraron, para que CRM los contacte.
 SELECT
     c.nombre,
     c.email,
@@ -33,9 +36,12 @@ FROM clientes AS c
 LEFT JOIN ventas AS v
     ON c.id_cliente = v.id_cliente
 WHERE v.id_venta IS NULL;
+-- Hallazgo: no aparece ningún cliente (0 filas). Los 5 clientes registrados compraron al menos
+-- una vez, así que CRM no tiene clientes inactivos para contactar.
 
-/* CONSULTA 3: Productos sin ventas (LEFT JOIN) */
--- Productos del catálogo que no tienen ninguna venta
+-- Consulta 3: Productos sin ventas (LEFT JOIN)
+-- Propósito: encontrar productos del catálogo sin movimiento, para que el área de producto
+-- decida si los promociona o los saca.
 SELECT
     p.nombre_producto AS producto,
     cat.nombre_categoria AS categoria,
@@ -46,9 +52,12 @@ INNER JOIN categorias AS cat
 LEFT JOIN ventas AS v
     ON p.id_producto = v.id_producto
 WHERE v.id_venta IS NULL;
+-- Hallazgo: no aparece ningún producto (0 filas). Los 6 productos del catálogo se vendieron,
+-- así que por ahora el área de producto no tiene artículos parados.
 
-/* CONSULTA 4: Consolidado por canal (UNION ALL) */
--- La columna canal se crea en cada SELECT: primera y segunda quincena de marzo
+-- Consulta 4: Consolidado por canal (UNION ALL)
+-- Propósito: comparar cuánto se vendió en la primera y en la segunda quincena de marzo.
+-- La columna canal no existe en la tabla: la creo en cada SELECT.
 SELECT
     canal,
     SUM(total) AS total_facturado
@@ -64,11 +73,5 @@ FROM (
     WHERE fecha_venta > '2024-03-10'
 ) AS ventas_por_canal
 GROUP BY canal;
-
-/* HALLAZGOS
--- 1. Cada cliente registrado realizó como mínimo una compra (la consulta 2 no retorna filas),
--- por lo que no existen clientes inactivos.
--- 2. Se vendieron todos los productos del catálogo (la consulta 3 no retorna filas),
--- de modo que no hay productos sin movimiento.
--- 3. La facturación de la primera quincena de marzo fue superior ($3.620) a la de la segunda ($2.824),
--- es decir, las ventas disminuyeron durante la segunda mitad del mes. */
+-- Hallazgo: en la primera quincena se facturó más ($3.620) que en la segunda ($2.824),
+-- o sea que las ventas bajaron en la segunda mitad del mes.
